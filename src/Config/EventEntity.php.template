@@ -1,0 +1,13 @@
+<?php
+
+namespace %%namespace%%;
+
+use Doctrine\ORM\Mapping as ORM;
+use PfaffKIT\Essa\Adapters\Storage\Entity\DoctrineEvent;
+
+#[
+    ORM\Entity,
+    ORM\Table(name: 'events'),
+    ORM\Index(columns: ['aggregate_id'], name: 'aggregate_id_idx')
+]
+readonly class Event extends DoctrineEvent {}
