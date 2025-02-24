@@ -3,6 +3,7 @@
 namespace PfaffKIT\Essa\Adapters\Storage;
 
 use Doctrine\ORM\EntityManagerInterface;
+use PfaffKIT\Essa\Adapters\Storage\Config\Config;
 use PfaffKIT\Essa\Adapters\Storage\Entity\DoctrineEvent;
 use PfaffKIT\Essa\EventSourcing\AggregateEvent;
 use PfaffKIT\Essa\EventSourcing\EventClassResolver;
@@ -17,6 +18,7 @@ readonly class DoctrineEventStorage implements EventStorage
 
     public function __construct(
         private EntityManagerInterface $em,
+        private Config $config,
         EventSerializer $eventSerializer,
         EventClassResolver $eventClassResolver,
     ) {
@@ -35,11 +37,14 @@ readonly class DoctrineEventStorage implements EventStorage
 
     /**
      * @return AggregateEvent[]
+     *
      * @throws UnresolvableEventException
      */
     public function load(Identity $aggregateId): array
     {
-        $doctrineEvents = $this->em->getRepository(DoctrineEvent::class)->findBy(
+        $entityClass = $this->config->entity;
+
+        $doctrineEvents = $this->em->getRepository($entityClass)->findBy(
             ['aggregateId' => $aggregateId]
         );
 

@@ -65,13 +65,16 @@ final readonly class EntityConfigurator implements Configurator
     private function createEntityClass(string $eventPath): string
     {
         $entityDestFile = $this->rootDir.DIRECTORY_SEPARATOR.$eventPath;
-        $entityNamespace = str_replace('/', '\\', preg_replace('/\.php$/', '', $eventPath));
-        $entityClassName = basename($entityNamespace, '.php');
+
+        $entityNamespace = preg_replace('/\\\\'.basename($eventPath).'$/', '', str_replace('/', '\\', $eventPath));
+        $entityNamespace = preg_replace('/^src\\\\/', 'App\\', $entityNamespace);
+
+        $entityClassName = basename($eventPath, '.php');
 
         $content = file_get_contents(__DIR__.'..'.DIRECTORY_SEPARATOR.'EventEntity.php.template');
         $content = str_replace('%%namespace%%', $entityNamespace, $content);
 
-        //file_put_contents($entityDestFile, $content);
+        file_put_contents($entityDestFile, $content);
 
         return $entityNamespace.'\\'.$entityClassName;
     }
