@@ -60,6 +60,7 @@ abstract readonly class DoctrineEvent
     {
         return [
             '_id' => $this->id,
+            '_aggregateId' => $this->aggregateId,
             '_name' => $this->eventName,
             '_timestamp' => $this->timestamp->format(JsonEventSerializer::DATE_TIME_FORMAT),
             '_payload' => $this->payload,
