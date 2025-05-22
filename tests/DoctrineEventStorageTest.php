@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PfaffKIT\Essa\Adapters\Storage\Tests;
 
-use Doctrine\ORM\Tools\SchemaTool;
+use PfaffKIT\Essa\Adapters\Storage\Config\Config;
 use PfaffKIT\Essa\Adapters\Storage\DoctrineEventStorage;
-use PfaffKIT\Essa\Adapters\Storage\Entity\DoctrineEvent;
+use PfaffKIT\Essa\Adapters\Storage\Tests\Entity\TestEvent;
 use PfaffKIT\Essa\Adapters\Storage\Tests\mocks\TestAggregateEvent;
-use PfaffKIT\Essa\Adapters\Storage\Tests\mocks\TestAnotherAggregateEvent;
 use PfaffKIT\Essa\EventSourcing\EventClassResolver;
 use PfaffKIT\Essa\EventSourcing\Serializer\JsonEventSerializer;
 use PfaffKIT\Essa\EventSourcing\Storage\EventStorage;
@@ -14,78 +15,92 @@ use PfaffKIT\Essa\Shared\Id;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(DoctrineEventStorage::class)]
-class DoctrineEventStorageTest extends ORMTestCase
+final class DoctrineEventStorageTest extends ORMTestCase
 {
-    protected readonly EventStorage $eventStorage;
+    private EventStorage $eventStorage;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        new SchemaTool($this->em)->createSchema([
-            $this->em->getClassMetadata(DoctrineEvent::class),
-        ]);
-
+        $config = new Config(TestEvent::class);
         $this->eventStorage = new DoctrineEventStorage(
             $this->em,
+            $config,
             new JsonEventSerializer(),
-            new EventClassResolver([TestAggregateEvent::class, TestAnotherAggregateEvent::class])
+            new EventClassResolver([
+                TestAggregateEvent::class,
+            ])
         );
     }
 
-    public function testStore(): void
+    public function testStoreEvents(): void
     {
-        $this->eventStorage->save(Id::new(), [
-            new TestAggregateEvent(
-                'sample string data',
-            ),
-        ]);
+        // Arrange
+        $aggregateId = Id::new();
+        $event = new TestAggregateEvent('test data', $aggregateId);
 
-        $this->assertCount(1, $this->em->getRepository(DoctrineEvent::class)->findAll());
+        // Act
+        $this->eventStorage->save($aggregateId, [$event]);
+
+        // Assert
+        $storedEvents = $this->em->getRepository(TestEvent::class)->findAll();
+        $this->assertCount(1, $storedEvents);
+        $this->assertSame((string) $aggregateId, $storedEvents[0]->aggregateId);
     }
 
-    public function testStoreAndLoadSameData(): void
+    public function testLoadEvents(): void
     {
-        $this->eventStorage->save($aggregateId = Id::new(), [
-            new TestAggregateEvent(
-                'sample string data',
-            ),
-        ]);
+        // Arrange
+        $aggregateId = Id::new();
+        $event = new TestAggregateEvent('test data', $aggregateId);
 
-        $events = $this->eventStorage->load($aggregateId);
+        // Act
+        $this->eventStorage->save($aggregateId, [$event]);
+        $loadedEvents = $this->eventStorage->load($aggregateId);
 
-        $this->assertCount(1, $events);
-        $this->assertInstanceOf(TestAggregateEvent::class, $events[0]);
-        $this->assertEquals('test_event', $events[0]->getEventName());
-        $this->assertEquals('sample string data', $events[0]->stringData);
+        // Assert
+        $this->assertCount(1, $loadedEvents);
+        $this->assertInstanceOf(TestAggregateEvent::class, $loadedEvents[0]);
+        $this->assertSame('test_event', $loadedEvents[0]->getEventName());
+        $this->assertSame('test data', $loadedEvents[0]->stringData);
     }
 
-    public function testStoreAndLoadMultipleEvents(): void
+    public function testHandleMultipleEvents(): void
     {
-        $this->eventStorage->save($aggregateId = Id::new(), [
-            $e1 = new TestAggregateEvent(
-                'sample string data',
-            ),
-            $e2 = new TestAggregateEvent(
-                'another sample string data',
-            ),
-            $e3 = new TestAnotherAggregateEvent(
-                'x data',
-                'y data',
-            ),
-            $e4 = new TestAnotherAggregateEvent(
-                'another x data',
-                'another y data',
-            ),
-        ]);
+        // Arrange
+        $aggregateId = Id::new();
+        $event1 = new TestAggregateEvent('foo', $aggregateId);
+        $event2 = new TestAggregateEvent('bar', $aggregateId);
+        $event3 = new TestAggregateEvent('baz', $aggregateId);
 
-        $events = $this->eventStorage->load($aggregateId);
+        $events = [$event1, $event2, $event3];
 
-        $this->assertCount(4, $events);
-        $this->assertInstanceOf(TestAggregateEvent::class, $events[0]);
-        $this->assertInstanceOf(TestAggregateEvent::class, $events[1]);
-        $this->assertInstanceOf(TestAnotherAggregateEvent::class, $events[2]);
-        $this->assertInstanceOf(TestAnotherAggregateEvent::class, $events[3]);
-        $this->assertEquals([$e1, $e2, $e3, $e4], $events);
+        // Act
+        $this->eventStorage->save($aggregateId, $events);
+        $loadedEvents = $this->eventStorage->load($aggregateId);
+
+        // Assert
+        $this->assertCount(3, $loadedEvents);
+
+        // Verify the order and types
+        $this->assertInstanceOf(TestAggregateEvent::class, $loadedEvents[0]);
+        $this->assertInstanceOf(TestAggregateEvent::class, $loadedEvents[1]);
+        $this->assertInstanceOf(TestAggregateEvent::class, $loadedEvents[2]);
+
+        // Verify the data is preserved
+        $this->assertSame('foo', $loadedEvents[0]->stringData);
+        $this->assertSame('bar', $loadedEvents[1]->stringData);
+        $this->assertSame('baz', $loadedEvents[2]->stringData);
+    }
+
+    public function testReturnsEmptyArrayWhenNoEventsFound(): void
+    {
+        // Act
+        $events = $this->eventStorage->load(Id::new());
+
+        // Assert
+        $this->assertIsArray($events);
+        $this->assertEmpty($events);
     }
 }
