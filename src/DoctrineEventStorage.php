@@ -53,13 +53,11 @@ readonly class DoctrineEventStorage implements EventStorage
         );
     }
 
-    /**
-     * @param array<class-string<AggregateEvent>> $eventTypes
-     */
     public function loadInBatches(
         int $offset = 0,
         int $batchSize = self::DEFAULT_BATCH_SIZE,
-        array $eventTypes = [],
+        array $limitEventTypes = [],
+        array $limitAggregateIds = [],
     ): iterable {
         $repository = $this->em->getRepository($this->config->entity);
         $queryBuilder = $repository->createQueryBuilder('e')
@@ -67,11 +65,17 @@ readonly class DoctrineEventStorage implements EventStorage
             ->setFirstResult($offset)
             ->setMaxResults($batchSize);
 
-        if (!empty($eventTypes)) {
+        if (!empty($limitEventTypes)) {
             // getEventName for each eventType
-            $eventNames = array_map(fn (string $eventType) => $eventType::getEventName(), $eventTypes);
+            $eventNames = array_map(fn (string $eventType) => $eventType::getEventName(), $limitEventTypes);
             $queryBuilder->andWhere('e.eventName IN (:eventNames)')
                 ->setParameter('eventNames', $eventNames);
+        }
+
+        if (!empty($limitAggregateIds)) {
+            $aggregateIds = array_map(fn (Identity $aggregateId) => (string) $aggregateId, $limitAggregateIds);
+            $queryBuilder->andWhere('e.aggregateId IN (:aggregateIds)')
+                ->setParameter('aggregateIds', $aggregateIds);
         }
 
         while (true) {
@@ -101,5 +105,28 @@ readonly class DoctrineEventStorage implements EventStorage
                 ->setParameter('lastId', $lastId)
                 ->setFirstResult(0); // Reset offset for subsequent queries
         }
+    }
+
+    public function count(array $limitEventTypes = [], array $limitAggregateIds = []): int
+    {
+        $repository = $this->em->getRepository($this->config->entity);
+        $queryBuilder = $repository->createQueryBuilder('e');
+
+        if (!empty($limitEventTypes)) {
+            // getEventName for each eventType
+            $eventNames = array_map(fn (string $eventType) => $eventType::getEventName(), $limitEventTypes);
+            $queryBuilder->andWhere('e.eventName IN (:eventNames)')
+                ->setParameter('eventNames', $eventNames);
+        }
+
+        if (!empty($limitAggregateIds)) {
+            $aggregateIds = array_map(fn (Identity $aggregateId) => (string) $aggregateId, $limitAggregateIds);
+            $queryBuilder->andWhere('e.aggregateId IN (:aggregateIds)')
+                ->setParameter('aggregateIds', $aggregateIds);
+        }
+
+        return $queryBuilder->select('COUNT(e.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 }
