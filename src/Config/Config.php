@@ -4,6 +4,8 @@ namespace PfaffKIT\Essa\Adapters\Storage\Config;
 
 use PfaffKIT\Essa\Internal\ExtensionConfig;
 use Symfony\Component\Config\Definition\Builder\NodeBuilder;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 class Config extends ExtensionConfig
 {
@@ -28,4 +30,6 @@ class Config extends ExtensionConfig
         $nodeBuilder
             ->scalarNode('entity')->defaultValue('App\Entity\Event')->end();
     }
+
+    public static function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void {}
 }
