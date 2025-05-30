@@ -1,0 +1,24 @@
+services:
+  essa-lib: # local development
+    image: essa-lib-storage-doctrine-connector:local
+    container_name: essa-lib-storage-doctrine-connector
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-dev
+    volumes:
+      - ./:/app
+
+  test:
+    image: essa-lib-storage-doctrine-connector:local-test
+    container_name: essa-lib-storage-doctrine-connector-test
+    restart: no
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-test
+    entrypoint: ['php', './vendor/bin/phpunit']
+    profiles: ["test"]
+    environment:
+      PHP_CS_FIXER_IGNORE_ENV: 1
