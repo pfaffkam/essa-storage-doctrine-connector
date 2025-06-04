@@ -1,6 +1,7 @@
 name: Pull request CI
 
 on:
+  workflow_dispatch:
   pull_request:
     types:
       - opened
@@ -13,10 +14,21 @@ defaults:
     shell: bash
 
 jobs:
-  csfixer:
-    if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
-    uses: pfaffkam/essa/.github/workflows/csfixer.yml@master
+  static_analyze:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CSFixer analyze
+        uses: pfaffkam/essa/.github/actions/csfixer@master
+        with:
+          compose_file: docker-compose.yml
+          csfixer_config: .php-cs-fixer.dist.php
 
   unit_tests:
-    if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
-    uses: pfaffkam/essa/.github/workflows/phpunit.yml@master
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        uses: pfaffkam/essa/.github/actions/phpunit@master
+        with:
+          compose_file: docker-compose.yml
