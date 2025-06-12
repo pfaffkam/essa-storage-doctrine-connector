@@ -1,6 +1,5 @@
 {
     "name": "pfaffkit/essa-storage-doctrine-connector",
-    "version": "1.0.0",
     "description": "Doctrine connector for ESSA",
     "type": "library",
     "license": "MIT",
