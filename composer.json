@@ -13,7 +13,7 @@
         "php": "^8.4",
         "doctrine/orm": "^2.10",
         "pfaffkit/essa": "*",
-        "symfony/cache": "7.2"
+        "symfony/cache": "^7.3"
     },
     "repositories": [
         {
