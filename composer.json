@@ -11,16 +11,10 @@
     ],
     "require": {
         "php": "^8.4",
-        "doctrine/orm": "^2.10",
+        "doctrine/orm": "3.*",
         "pfaffkit/essa": "*",
         "symfony/cache": "^7.3"
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../core"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "PfaffKIT\\Essa\\Adapters\\Storage\\": "src/"
