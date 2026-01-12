@@ -32,4 +32,17 @@ class Config extends ExtensionConfig
     }
 
     public static function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void {}
+
+    public static function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
+    {
+        $doctrineConfig = [
+            'dbal' => [
+                'types' => [
+                    'datetime_precise' => \PfaffKIT\Essa\Adapters\Storage\Type\DateTimePreciseType::class,
+                ],
+            ],
+        ];
+
+        $builder->prependExtensionConfig('doctrine', $doctrineConfig);
+    }
 }

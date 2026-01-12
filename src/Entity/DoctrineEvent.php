@@ -25,8 +25,8 @@ abstract readonly class DoctrineEvent
     #[ORM\Column(name: 'event_name', type: Types::STRING)]
     public string $eventName;
 
-    #[ORM\Column(name: 'occurred_on', type: Types::DATETIME_IMMUTABLE)]
-    public \DateTimeImmutable $timestamp;
+    #[ORM\Column(name: 'occurred_on', type: Types::BIGINT)]
+    public int $timestamp;
 
     #[ORM\Column(name: 'payload', type: Types::TEXT)]
     public string $payload;
@@ -35,7 +35,7 @@ abstract readonly class DoctrineEvent
         string $id,
         string $aggregateId,
         string $eventName,
-        \DateTimeImmutable $timestamp,
+        int $timestamp,
         string $payload,
     ) {
         $this->id = $id;
@@ -51,7 +51,7 @@ abstract readonly class DoctrineEvent
             $event['_id'],
             (string) $aggregateId,
             $event['_name'],
-            new \DateTimeImmutable($event['_timestamp']),
+            $event['_timestamp'],
             $event['_payload'],
         );
     }
@@ -62,7 +62,7 @@ abstract readonly class DoctrineEvent
             '_id' => $this->id,
             '_aggregateId' => $this->aggregateId,
             '_name' => $this->eventName,
-            '_timestamp' => $this->timestamp->format(JsonEventSerializer::DATE_TIME_FORMAT),
+            '_timestamp' => $this->timestamp,
             '_payload' => $this->payload,
         ];
     }
