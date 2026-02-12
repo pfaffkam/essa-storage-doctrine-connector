@@ -4,7 +4,6 @@ namespace PfaffKIT\Essa\Adapters\Storage\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use PfaffKIT\Essa\EventSourcing\Serializer\JsonEventSerializer;
 use PfaffKIT\Essa\Shared\Identity;
 
 #[
@@ -28,6 +27,9 @@ abstract readonly class DoctrineEvent
     #[ORM\Column(name: 'occurred_on', type: Types::BIGINT)]
     public int $timestamp;
 
+    #[ORM\Column(name: 'version', type: Types::INTEGER, options: ['default' => 1])]
+    public int $version;
+
     #[ORM\Column(name: 'payload', type: Types::TEXT)]
     public string $payload;
 
@@ -36,12 +38,14 @@ abstract readonly class DoctrineEvent
         string $aggregateId,
         string $eventName,
         int $timestamp,
+        int $version,
         string $payload,
     ) {
         $this->id = $id;
         $this->aggregateId = $aggregateId;
         $this->eventName = $eventName;
         $this->timestamp = $timestamp;
+        $this->version = $version;
         $this->payload = $payload;
     }
 
@@ -52,6 +56,7 @@ abstract readonly class DoctrineEvent
             (string) $aggregateId,
             $event['_name'],
             $event['_timestamp'],
+            $event['_version'],
             $event['_payload'],
         );
     }
@@ -63,6 +68,7 @@ abstract readonly class DoctrineEvent
             '_aggregateId' => $this->aggregateId,
             '_name' => $this->eventName,
             '_timestamp' => $this->timestamp,
+            '_version' => $this->version,
             '_payload' => $this->payload,
         ];
     }

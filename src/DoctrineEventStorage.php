@@ -10,6 +10,7 @@ use PfaffKIT\Essa\EventSourcing\EventClassResolver;
 use PfaffKIT\Essa\EventSourcing\Exception\UnresolvableEventException;
 use PfaffKIT\Essa\EventSourcing\Serializer\EventSerializer;
 use PfaffKIT\Essa\EventSourcing\Storage\EventStorage;
+use PfaffKIT\Essa\Shared\EventTimestamp;
 use PfaffKIT\Essa\Shared\Identity;
 
 readonly class DoctrineEventStorage implements EventStorage
@@ -40,16 +41,25 @@ readonly class DoctrineEventStorage implements EventStorage
      *
      * @throws UnresolvableEventException
      */
-    public function load(Identity $aggregateId): array
+    public function load(Identity $aggregateId, ?EventTimestamp $timeFilterAfter = null): array
     {
-        $doctrineEvents = $this->em->getRepository($this->config->entity)->findBy(
-            ['aggregateId' => $aggregateId],
-            ['timestamp' => 'ASC']
-        );
+
+        $repository = $this->em->getRepository($this->config->entity);
+        $queryBuilder = $repository->createQueryBuilder('e')
+            ->addOrderBy('e.timestamp', 'ASC')
+            ->addOrderBy('e.id', 'ASC')
+            ->andWhere('e.aggregateId = :aggregateId')
+            ->setParameter('aggregateId', $aggregateId);
+
+        if ($timeFilterAfter) {
+            $queryBuilder
+                ->andWhere('e.timestamp >= :timeFilterAfter')
+                ->setParameter('timeFilterAfter', $timeFilterAfter->epoch);
+        }
 
         return array_map(
             fn (DoctrineEvent $event) => $this->eventConverter->fromDoctrineEvent($event),
-            $doctrineEvents
+            $queryBuilder->getQuery()->getResult()
         );
     }
 
@@ -58,10 +68,12 @@ readonly class DoctrineEventStorage implements EventStorage
         int $batchSize = self::DEFAULT_BATCH_SIZE,
         array $limitEventTypes = [],
         array $limitAggregateIds = [],
+        ?EventTimestamp $timeFilterAfter = null,
     ): iterable {
         $repository = $this->em->getRepository($this->config->entity);
         $queryBuilder = $repository->createQueryBuilder('e')
-            ->orderBy('e.timestamp', 'ASC')
+            ->addOrderBy('e.timestamp', 'ASC')
+            ->addOrderBy('e.id', 'ASC')
             ->setFirstResult($offset)
             ->setMaxResults($batchSize);
 
@@ -76,6 +88,12 @@ readonly class DoctrineEventStorage implements EventStorage
             $aggregateIds = array_map(fn (Identity $aggregateId) => (string) $aggregateId, $limitAggregateIds);
             $queryBuilder->andWhere('e.aggregateId IN (:aggregateIds)')
                 ->setParameter('aggregateIds', $aggregateIds);
+        }
+
+        if ($timeFilterAfter) {
+            $queryBuilder
+                ->andWhere('e.timestamp >= :timeFilterAfter')
+                ->setParameter('timeFilterAfter', $timeFilterAfter->epoch);
         }
 
         while (true) {
